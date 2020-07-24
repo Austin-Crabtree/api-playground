@@ -33,7 +33,7 @@ func main() {
 	e.GET("/api/data", data)
 	e.GET("/api/os", getOS)
 	e.GET("/api/routes", routes)
-	e.POST("/api/upload", upload)
+	e.PUT("/api/upload", upload)
 
 	// Output the current routes to a file for /api/routes to use
 	data, err := json.MarshalIndent(e.Routes(), "", "  ")
