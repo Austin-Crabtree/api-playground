@@ -3,8 +3,11 @@ package main
 import (
 	"api-playground/models"
 	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"runtime"
 
 	"github.com/labstack/echo/v4"
@@ -30,6 +33,7 @@ func main() {
 	e.GET("/api/data", data)
 	e.GET("/api/os", getOS)
 	e.GET("/api/routes", routes)
+	e.POST("/api/upload", upload)
 
 	// Output the current routes to a file for /api/routes to use
 	data, err := json.MarshalIndent(e.Routes(), "", "  ")
@@ -73,7 +77,31 @@ func getOS(c echo.Context) error {
 func routes(c echo.Context) error {
 	routes, err := ioutil.ReadFile("routes.json")
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Error reading routes file")
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("Error reading routes file: %s", err.Error()))
 	}
 	return c.String(http.StatusOK, string(routes))
+}
+
+func upload(c echo.Context) error {
+	file, err := c.FormFile("file")
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("Error getting file form value: %s", err.Error()))
+	}
+	src, err := file.Open()
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("Error opening file: %s", err.Error()))
+	}
+	defer src.Close()
+
+	dst, err := os.Create(file.Filename)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("Error creating destination file: %s", err.Error()))
+	}
+	defer dst.Close()
+
+	if _, err = io.Copy(dst, src); err != nil {
+		return c.String(http.StatusInternalServerError, fmt.Sprintf("Error copying file contents to destination file: %s", err.Error()))
+	}
+
+	return c.HTML(http.StatusOK, fmt.Sprintf("<p>File %s uploaded successfully</p>", file.Filename))
 }
